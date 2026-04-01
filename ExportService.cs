@@ -17,8 +17,6 @@ public static class ExportService
     {
         var doc = new XWPFDocument();
 
-        // 지문별 생성
-
         foreach (var p in passages)
         {
             if (string.IsNullOrEmpty(p.English)) continue;
@@ -32,43 +30,49 @@ public static class ExportService
             hRun.SetColor("C0645C");
             hRun.FontFamily = "맑은 고딕";
 
-            // 영어 지문 (마킹 적용)
-            var engPara = doc.CreateParagraph();
-            engPara.SpacingBetween = 1.5;
-            RenderMarkedText(engPara, p.Numbered, p.Marks);
+            // 좌우 2단 테이블 (좌: 지문, 우: 해석+어휘)
+            var table = doc.CreateTable(1, 2);
+            table.Width = 5000;
+            table.SetColumnWidth(0, 2800);
+            table.SetColumnWidth(1, 2200);
+
+            // 테두리 제거
+            var tblPr = table.GetCTTbl().tblPr;
+            tblPr.tblBorders = new CT_TblBorders();
+
+            // ── 좌측: 영어 지문 ──
+            var leftCell = table.GetRow(0).GetCell(0);
+            leftCell.Paragraphs[0].SpacingBetween = 1.5;
+            RenderMarkedText(leftCell.Paragraphs[0], p.Numbered, p.Marks);
 
             // 각주
             if (!string.IsNullOrEmpty(p.Footnotes))
             {
-                var fnPara = doc.CreateParagraph();
+                var fnPara = leftCell.AddParagraph();
                 var fnRun = fnPara.CreateRun();
                 fnRun.SetText(p.Footnotes);
-                fnRun.FontSize = 9;
+                fnRun.FontSize = 8;
                 fnRun.SetColor("888888");
                 fnRun.FontFamily = "맑은 고딕";
             }
 
-            // 구분선
-            var divPara = doc.CreateParagraph();
-            var divRun = divPara.CreateRun();
-            divRun.SetText("─────────────────────────────────");
-            divRun.SetColor("DDDDDD");
-            divRun.FontSize = 6;
+            // ── 우측: 해석 + 어휘 ──
+            var rightCell = table.GetRow(0).GetCell(1);
+
+            // 헤더
+            var koHeader = rightCell.Paragraphs[0];
+            var khRun = koHeader.CreateRun();
+            khRun.SetText("해석 및 어휘 ✈");
+            khRun.FontSize = 10;
+            khRun.IsBold = true;
+            khRun.SetColor("C0645C");
+            khRun.FontFamily = "맑은 고딕";
 
             // 해석
             if (!string.IsNullOrEmpty(p.Korean))
             {
-                var koHeader = doc.CreateParagraph();
-                var khRun = koHeader.CreateRun();
-                khRun.SetText("해석 및 어휘");
-                khRun.FontSize = 10;
-                khRun.IsBold = true;
-                khRun.SetColor("C0645C");
-                khRun.FontFamily = "맑은 고딕";
-
-                // 문장 번호 추가
                 var koSents = Regex.Split(p.Korean, @"(?<=[.다])\s+");
-                var koPara = doc.CreateParagraph();
+                var koPara = rightCell.AddParagraph();
                 koPara.SpacingBetween = 1.3;
                 for (int si = 0; si < koSents.Length; si++)
                 {
@@ -80,14 +84,21 @@ public static class ExportService
                 }
             }
 
+            // 구분선
+            var divPara = rightCell.AddParagraph();
+            var divRun = divPara.CreateRun();
+            divRun.SetText("────────────────────");
+            divRun.SetColor("DDDDDD");
+            divRun.FontSize = 6;
+
             // 어휘
             if (p.VocabWords.Count > 0)
             {
-                var vPara = doc.CreateParagraph();
+                var vPara = rightCell.AddParagraph();
                 foreach (var vw in p.VocabWords)
                 {
                     var vRun = vPara.CreateRun();
-                    vRun.SetText("· " + vw + "  ");
+                    vRun.SetText("· " + vw + "\n");
                     vRun.FontSize = 8;
                     vRun.FontFamily = "맑은 고딕";
                 }
