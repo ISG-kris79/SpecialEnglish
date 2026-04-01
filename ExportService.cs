@@ -196,7 +196,7 @@ public static class ExportService
     public static void ExportPdf(List<PassageData> passages, string outputPath)
     {
         QuestPDF.Settings.License = LicenseType.Community;
-        var coralColor = Color.FromHex("#C0645C");
+        var coral = Color.FromHex("#C0645C");
 
         QuestPDF.Fluent.Document.Create(container =>
         {
@@ -208,68 +208,84 @@ public static class ExportService
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4);
-                    page.Margin(20);
-                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily("맑은 고딕"));
+                    page.Margin(15);
+                    page.DefaultTextStyle(x => x.FontSize(9).FontFamily("맑은 고딕"));
 
                     // 상단 배너
-                    page.Header().Background(coralColor).Padding(10).Row(row =>
+                    page.Header().Height(30).Background(coral).Padding(6).Row(row =>
                     {
-                        row.RelativeItem().Text(text =>
-                        {
-                            text.Span("수특 영어를 휩쓸다").FontSize(14).Bold().FontColor(Colors.White);
-                        });
-                        row.ConstantItem(200).AlignRight().Text(text =>
-                        {
-                            text.Span($"수특 {p.Key}  |  {GetType(p)}").FontSize(10).FontColor(Colors.White);
-                        });
+                        row.RelativeItem().AlignMiddle().Text("수특 영어를 휩쓸다")
+                            .FontSize(13).Bold().FontColor(Colors.White);
+                        row.ConstantItem(180).AlignMiddle().AlignRight()
+                            .Text($"수특 {p.Key}  |  {GetType(p)}")
+                            .FontSize(9).FontColor(Colors.White);
                     });
 
-                    page.Content().Column(col =>
+                    // 좌우 2단
+                    page.Content().PaddingTop(8).Row(row =>
                     {
-                        col.Spacing(6);
-                        col.Item().Height(5);
+                        // ── 좌측: 영어 지문 ──
+                        row.RelativeItem(55).PaddingRight(6).Column(left =>
+                        {
+                            left.Spacing(4);
 
-                        // 영어 지문 (마킹)
-                        col.Item().Text(text => RenderPdfMarked(text, p.Numbered, p.Marks));
+                            // 지문 (마킹)
+                            left.Item().Text(text =>
+                            {
+                                text.DefaultTextStyle(x => x.FontSize(9).LineHeight(1.6f));
+                                RenderPdfMarked(text, p.Numbered, p.Marks);
+                            });
 
-                        // 각주
-                        if (!string.IsNullOrEmpty(p.Footnotes))
-                            col.Item().Text(p.Footnotes).FontSize(8).FontColor(Colors.Grey.Medium);
+                            // 각주
+                            if (!string.IsNullOrEmpty(p.Footnotes))
+                                left.Item().PaddingTop(4).Text(p.Footnotes)
+                                    .FontSize(7).FontColor(Colors.Grey.Medium);
+                        });
 
                         // 구분선
-                        col.Item().PaddingVertical(4).LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten3);
+                        row.ConstantItem(1).Background(Colors.Grey.Lighten3);
 
-                        // 해석 및 어휘 헤더
-                        col.Item().Text("해석 및 어휘 ✈").Bold().FontSize(11).FontColor(coralColor);
-
-                        // 해석 (문장 번호 추가)
-                        if (!string.IsNullOrEmpty(p.Korean))
+                        // ── 우측: 해석 + 어휘 ──
+                        row.RelativeItem(45).PaddingLeft(6).Column(right =>
                         {
-                            var koSents = Regex.Split(p.Korean, @"(?<=[.다])\s+");
-                            col.Item().Text(text =>
+                            right.Spacing(4);
+
+                            // 헤더
+                            right.Item().Text("해석 및 어휘 ✈").Bold().FontSize(10).FontColor(coral);
+
+                            // 해석
+                            if (!string.IsNullOrEmpty(p.Korean))
                             {
-                                for (int si = 0; si < koSents.Length; si++)
+                                var koSents = Regex.Split(p.Korean, @"(?<=[.다])\s+");
+                                right.Item().Text(text =>
                                 {
-                                    var prefix = si < Circled.Length ? Circled[si] + " " : "";
-                                    text.Span(prefix + koSents[si].Trim() + "\n").FontSize(9).LineHeight(1.5f);
-                                }
-                            });
-                        }
+                                    text.DefaultTextStyle(x => x.FontSize(8).LineHeight(1.5f));
+                                    for (int si = 0; si < koSents.Length; si++)
+                                    {
+                                        var prefix = si < Circled.Length ? Circled[si] + " " : "";
+                                        text.Span(prefix + koSents[si].Trim() + "\n");
+                                    }
+                                });
+                            }
 
-                        // 어휘
-                        if (p.VocabWords.Count > 0)
-                        {
-                            col.Item().PaddingTop(4).Text(text =>
+                            // 구분선
+                            right.Item().PaddingVertical(3).LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten3);
+
+                            // 어휘
+                            if (p.VocabWords.Count > 0)
                             {
-                                foreach (var vw in p.VocabWords)
-                                    text.Span("· " + vw + "\n").FontSize(8).LineHeight(1.4f);
-                            });
-                        }
+                                right.Item().Text(text =>
+                                {
+                                    text.DefaultTextStyle(x => x.FontSize(7).LineHeight(1.4f));
+                                    foreach (var vw in p.VocabWords)
+                                        text.Span("· " + vw + "\n");
+                                });
+                            }
+                        });
                     });
 
-                    // 하단 페이지 번호
                     page.Footer().AlignCenter().Text(text =>
-                        text.CurrentPageNumber().FontSize(8).FontColor(Colors.Grey.Medium));
+                        text.CurrentPageNumber().FontSize(7).FontColor(Colors.Grey.Medium));
                 });
             }
         }).GeneratePdf(outputPath);
