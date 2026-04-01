@@ -23,20 +23,14 @@ public static class ExportService
         {
             if (string.IsNullOrEmpty(p.English)) continue;
 
-            // 헤더: 수특 영어를 휩쓸다 + 수특 X-Y + 유형
+            // 헤더
             var header = doc.CreateParagraph();
-            header.Alignment = ParagraphAlignment.LEFT;
-            var hRun1 = header.CreateRun();
-            hRun1.SetText("수특 영어를 휩쓸다  ");
-            hRun1.FontSize = 14;
-            hRun1.IsBold = true;
-            hRun1.SetColor("C0645C");
-            hRun1.FontFamily = "맑은 고딕";
-            var hRun2 = header.CreateRun();
-            hRun2.SetText($"수특 {p.Key}  |  {GetType(p)}");
-            hRun2.FontSize = 10;
-            hRun2.SetColor("888888");
-            hRun2.FontFamily = "맑은 고딕";
+            var hRun = header.CreateRun();
+            hRun.SetText($"수특 {p.Key}  |  {GetType(p)}");
+            hRun.FontSize = 14;
+            hRun.IsBold = true;
+            hRun.SetColor("C0645C");
+            hRun.FontFamily = "맑은 고딕";
 
             // 영어 지문 (마킹 적용)
             var engPara = doc.CreateParagraph();
@@ -66,7 +60,7 @@ public static class ExportService
             {
                 var koHeader = doc.CreateParagraph();
                 var khRun = koHeader.CreateRun();
-                khRun.SetText("해석 및 어휘 ✈");
+                khRun.SetText("해석 및 어휘");
                 khRun.FontSize = 10;
                 khRun.IsBold = true;
                 khRun.SetColor("C0645C");
