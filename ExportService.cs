@@ -2,12 +2,9 @@ using System.IO;
 using System.Text.RegularExpressions;
 using NPOI.XWPF.UserModel;
 using NPOI.OpenXmlFormats.Wordprocessing;
-using iText.Kernel.Pdf;
-using iText.Layout;
-using iText.Layout.Element;
-using iText.Kernel.Font;
-using iText.IO.Font;
-using iText.Kernel.Colors;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace SuneungMarker;
 
@@ -193,96 +190,93 @@ public static class ExportService
     }
 
     // ═══════════════════════════
-    //  PDF 내보내기
+    //  PDF 내보내기 (QuestPDF)
     // ═══════════════════════════
 
     public static void ExportPdf(List<PassageData> passages, string outputPath)
     {
-        var writer = new PdfWriter(outputPath);
-        var pdf = new PdfDocument(writer);
-        var doc = new iText.Layout.Document(pdf, iText.Kernel.Geom.PageSize.A4);
-        doc.SetMargins(30, 30, 30, 30);
+        QuestPDF.Settings.License = LicenseType.Community;
 
-        PdfFont font;
-        try { font = PdfFontFactory.CreateFont(@"C:\Windows\Fonts\malgun.ttf", PdfEncodings.IDENTITY_H); }
-        catch { font = PdfFontFactory.CreateFont(iText.IO.Font.Constants.StandardFonts.HELVETICA); }
-
-        PdfFont fontBold;
-        try { fontBold = PdfFontFactory.CreateFont(@"C:\Windows\Fonts\malgunbd.ttf", PdfEncodings.IDENTITY_H); }
-        catch { fontBold = font; }
-
-        foreach (var p in passages)
+        QuestPDF.Fluent.Document.Create(container =>
         {
-            if (string.IsNullOrEmpty(p.English)) continue;
-
-            // 헤더
-            doc.Add(new Paragraph($"수특 {p.Key}  |  {GetType(p)}")
-                .SetFont(fontBold).SetFontSize(14)
-                .SetFontColor(new DeviceRgb(192, 100, 92)));
-
-            // 영어 지문 (마킹)
-            var engPara = new Paragraph().SetFont(font).SetFontSize(10).SetFixedLeading(18);
-            RenderPdfMarked(engPara, p.Numbered, p.Marks, font, fontBold);
-            doc.Add(engPara);
-
-            // 각주
-            if (!string.IsNullOrEmpty(p.Footnotes))
-                doc.Add(new Paragraph(p.Footnotes).SetFont(font).SetFontSize(8)
-                    .SetFontColor(new DeviceRgb(136, 136, 136)));
-
-            // 구분선
-            doc.Add(new Paragraph("─────────────────────────────").SetFont(font).SetFontSize(6)
-                .SetFontColor(new DeviceRgb(221, 221, 221)));
-
-            // 해석
-            if (!string.IsNullOrEmpty(p.Korean))
+            foreach (var p in passages)
             {
-                doc.Add(new Paragraph("해석 및 어휘").SetFont(fontBold).SetFontSize(10)
-                    .SetFontColor(new DeviceRgb(192, 100, 92)));
+                if (string.IsNullOrEmpty(p.English)) continue;
 
-                var koSents = Regex.Split(p.Korean, @"(?<=[.다])\s+");
-                var koPara = new Paragraph().SetFont(font).SetFontSize(9).SetFixedLeading(16);
-                for (int si = 0; si < koSents.Length; si++)
+                container.Page(page =>
                 {
-                    var prefix = si < Circled.Length ? Circled[si] + " " : "";
-                    koPara.Add(new Text(prefix + koSents[si].Trim() + " "));
-                }
-                doc.Add(koPara);
+                    page.Size(PageSizes.A4);
+                    page.Margin(25);
+                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily("맑은 고딕"));
+
+                    page.Header().Text($"수특 {p.Key}  |  {GetType(p)}")
+                        .Bold().FontSize(14).FontColor(Colors.Red.Medium);
+
+                    page.Content().Column(col =>
+                    {
+                        col.Spacing(8);
+
+                        // 영어 지문 (마킹)
+                        col.Item().Text(text => RenderPdfMarked(text, p.Numbered, p.Marks));
+
+                        // 각주
+                        if (!string.IsNullOrEmpty(p.Footnotes))
+                            col.Item().Text(p.Footnotes).FontSize(8).FontColor(Colors.Grey.Medium);
+
+                        // 구분선
+                        col.Item().LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten3);
+
+                        // 해석
+                        if (!string.IsNullOrEmpty(p.Korean))
+                        {
+                            col.Item().Text("해석 및 어휘").Bold().FontSize(10).FontColor(Colors.Red.Medium);
+                            var koSents = Regex.Split(p.Korean, @"(?<=[.다])\s+");
+                            col.Item().Text(text =>
+                            {
+                                for (int si = 0; si < koSents.Length; si++)
+                                {
+                                    var prefix = si < Circled.Length ? Circled[si] + " " : "";
+                                    text.Span(prefix + koSents[si].Trim() + " ").FontSize(9);
+                                }
+                            });
+                        }
+
+                        // 어휘
+                        if (p.VocabWords.Count > 0)
+                        {
+                            col.Item().Text(text =>
+                            {
+                                foreach (var vw in p.VocabWords)
+                                    text.Span("· " + vw + "  ").FontSize(8);
+                            });
+                        }
+                    });
+
+                    page.Footer().AlignCenter().Text(text =>
+                        text.CurrentPageNumber().FontSize(8).FontColor(Colors.Grey.Medium));
+                });
             }
-
-            // 어휘
-            if (p.VocabWords.Count > 0)
-            {
-                var vPara = new Paragraph().SetFont(font).SetFontSize(8).SetFixedLeading(14);
-                foreach (var vw in p.VocabWords)
-                    vPara.Add(new Text("· " + vw + "  "));
-                doc.Add(vPara);
-            }
-
-            doc.Add(new AreaBreak(iText.Layout.Properties.AreaBreakType.NEXT_PAGE));
-        }
-
-        doc.Close();
+        }).GeneratePdf(outputPath);
     }
 
-    private static void RenderPdfMarked(Paragraph para, string text, List<MarkItem> marks, PdfFont font, PdfFont fontBold)
+    private static void RenderPdfMarked(TextDescriptor text, string content, List<MarkItem> marks)
     {
-        if (string.IsNullOrEmpty(text) || marks.Count == 0)
+        if (string.IsNullOrEmpty(content) || marks.Count == 0)
         {
-            para.Add(new Text(text ?? "").SetFont(font));
+            text.Span(content ?? "");
             return;
         }
 
-        var charType = new string?[text.Length];
-        var inCore = new bool[text.Length];
-        var priority = new Dictionary<string, int> { {"어법",6}, {"빈칸",5}, {"어휘",4}, {"연결어",3}, {"순서",2}, {"밑줄의미",2}, {"서술형",2}, {"핵심",1} };
+        var charType = new string?[content.Length];
+        var inCore = new bool[content.Length];
+        var priority = new Dictionary<string, int> { {"어법",6}, {"빈칸",5}, {"어휘",4}, {"연결어",3}, {"순서",2}, {"핵심",1} };
 
         foreach (var m in marks.Where(x => x.Type == "핵심"))
-            for (int i = m.Start; i < Math.Min(m.End, text.Length); i++)
+            for (int i = m.Start; i < Math.Min(m.End, content.Length); i++)
             { charType[i] = "핵심"; inCore[i] = true; }
 
         foreach (var m in marks.Where(x => x.Type != "핵심"))
-            for (int i = m.Start; i < Math.Min(m.End, text.Length); i++)
+            for (int i = m.Start; i < Math.Min(m.End, content.Length); i++)
             {
                 var cur = charType[i];
                 if (cur == null || priority.GetValueOrDefault(m.Type) > priority.GetValueOrDefault(cur))
@@ -290,50 +284,33 @@ public static class ExportService
             }
 
         int pos = 0;
-        while (pos < text.Length)
+        while (pos < content.Length)
         {
             var curType = charType[pos];
             var curCore = inCore[pos];
             int start = pos;
-            while (pos < text.Length && charType[pos] == curType && inCore[pos] == curCore)
+            while (pos < content.Length && charType[pos] == curType && inCore[pos] == curCore)
                 pos++;
 
-            var segment = text[start..pos];
-            var t = new Text(segment);
+            var segment = content[start..pos];
 
             if (curType == "어법")
             {
-                t.SetFont(curCore ? fontBold : font).SetFontColor(new DeviceRgb(0xE8, 0x38, 0x4F));
-                if (curCore) t.SetUnderline();
+                var s = text.Span(segment).FontColor(Color.FromHex("#E8384F"));
+                if (curCore) s.Bold().Underline();
             }
             else if (curType == "빈칸")
-            {
-                t.SetFont(fontBold).SetFontColor(new DeviceRgb(0xF5, 0x7F, 0x17))
-                    .SetBackgroundColor(new DeviceRgb(0xFF, 0xF9, 0xC4));
-            }
+                text.Span(segment).Bold().FontColor(Color.FromHex("#F57F17")).BackgroundColor(Color.FromHex("#FFF9C4"));
             else if (curType == "어휘")
-            {
-                t.SetFont(font).SetBackgroundColor(new DeviceRgb(0xFF, 0xDC, 0xA8));
-            }
+                text.Span(segment).BackgroundColor(Color.FromHex("#FFDCA8"));
             else if (curType == "연결어")
-            {
-                t.SetFont(fontBold).SetFontColor(new DeviceRgb(0x2E, 0x7D, 0x32))
-                    .SetBackgroundColor(new DeviceRgb(0xE0, 0xF2, 0xE0));
-            }
+                text.Span(segment).Bold().FontColor(Color.FromHex("#2E7D32")).BackgroundColor(Color.FromHex("#E0F2E0"));
             else if (curType == "순서")
-            {
-                t.SetFont(fontBold).SetFontColor(new DeviceRgb(0x21, 0x96, 0xF3));
-            }
+                text.Span(segment).Bold().FontColor(Color.FromHex("#2196F3"));
             else if (curCore)
-            {
-                t.SetFont(fontBold).SetUnderline();
-            }
+                text.Span(segment).Bold().Underline();
             else
-            {
-                t.SetFont(font);
-            }
-
-            para.Add(t);
+                text.Span(segment);
         }
     }
 
