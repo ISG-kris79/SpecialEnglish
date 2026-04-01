@@ -5,9 +5,14 @@ namespace SuneungMarker;
 
 public partial class App : Application
 {
-    protected override void OnStartup(StartupEventArgs e)
+    [STAThread]
+    public static void Main(string[] args)
     {
         VelopackApp.Build().Run();
-        base.OnStartup(e);
+
+        var app = new App();
+        app.InitializeComponent();
+        app.StartupUri = new Uri("MainWindow.xaml", UriKind.Relative);
+        app.Run();
     }
 }

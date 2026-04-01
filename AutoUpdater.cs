@@ -5,7 +5,7 @@ namespace SuneungMarker;
 
 public static class AutoUpdater
 {
-    public const string CurrentVersion = "1.2.0";
+    public const string CurrentVersion = "1.2.1";
     private const string RepoUrl = "https://github.com/ISG-kris79/SpecialEnglish";
 
     public static async Task CheckAndApply(Action<string>? onStatus = null)
