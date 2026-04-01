@@ -684,6 +684,60 @@ main()
         }
     }
 
+    private async void BtnAiAnalyzeAll_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(AiAnalyzer.ClaudeKey) && string.IsNullOrEmpty(AiAnalyzer.GptKey) && string.IsNullOrEmpty(AiAnalyzer.GeminiKey))
+        {
+            MessageBox.Show("API 키가 설정되지 않았습니다.\n설정 버튼에서 API 키를 등록하세요.", "AI 분석");
+            BtnSettings_Click(sender, e);
+            return;
+        }
+
+        var result = MessageBox.Show(
+            $"전체 {_passages.Count}개 지문을 AI로 분석합니다.\n\n이미 마킹된 지문은 건너뜁니다.\n시간이 오래 걸릴 수 있습니다.\n\n계속하시겠습니까?",
+            "전체 AI 분석", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+        if (result != MessageBoxResult.OK) return;
+
+        PnlAiOverlay.Visibility = Visibility.Visible;
+        PrgAiIndeterminate.Visibility = Visibility.Visible;
+
+        var analyzer = new AiAnalyzer();
+        int done = 0;
+        int total = _passages.Count(p => p.Marks.Count == 0 && !string.IsNullOrEmpty(p.English));
+
+        for (int i = 0; i < _passages.Count; i++)
+        {
+            var p = _passages[i];
+            if (p.Marks.Count > 0 || string.IsNullOrEmpty(p.English)) continue;
+
+            done++;
+            int pct = (int)(done * 100.0 / Math.Max(1, total));
+            TxtAiStatus.Text = $"[{done}/{total}] 수특 {p.Key} 분석 중...";
+            TxtAiPercent.Text = $"{pct}%";
+            PrgAi.Value = pct;
+
+            try
+            {
+                var vocabStr = string.Join(", ", p.VocabWords.Select(v => v.Split(' ')[0]).Take(10));
+                var marks = await analyzer.AnalyzeAsync(p.Numbered, p.English, vocabStr, p.Footnotes);
+                p.Marks = marks;
+            }
+            catch { /* 실패 시 건너뛰기 */ }
+
+            await Task.Delay(500); // rate limit 방지
+        }
+
+        TxtAiStatus.Text = "전체 분석 완료!";
+        TxtAiPercent.Text = "100%";
+        PrgAi.Value = 100;
+        PrgAiIndeterminate.Visibility = Visibility.Collapsed;
+        await Task.Delay(1000);
+        PnlAiOverlay.Visibility = Visibility.Collapsed;
+
+        ShowPassage(_currentIndex);
+        TxtStatus.Text = $"전체 AI 분석 완료: {done}개 처리";
+    }
+
     private void BtnSave_Click(object sender, RoutedEventArgs e)
     {
         var path = Path.Combine(_dataFolder, "marks_v2.json");
@@ -732,6 +786,30 @@ main()
             catch (Exception ex)
             {
                 MessageBox.Show($"저장 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private void BtnExportPdf_Click(object sender, RoutedEventArgs e)
+    {
+        BtnSave_Click(sender, e);
+        var dlg = new SaveFileDialog
+        {
+            Filter = "PDF 파일|*.pdf|모든 파일|*.*",
+            FileName = "수특영어_종합.pdf",
+            Title = "PDF 내보내기"
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            try
+            {
+                ExportService.ExportPdf(_passages, dlg.FileName);
+                TxtStatus.Text = $"PDF 저장 완료: {dlg.FileName}";
+                MessageBox.Show($"PDF 저장 완료!\n{dlg.FileName}", "내보내기");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"PDF 저장 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

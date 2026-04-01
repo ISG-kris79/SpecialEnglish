@@ -55,9 +55,11 @@
                 <StackPanel x:Name="PnlNavButtons" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,15,0" Visibility="Collapsed">
                     <Button Content="◀ 이전" Style="{StaticResource NavBtn}" Click="BtnPrev_Click" Background="#A0504A"/>
                     <Button Content="다음 ▶" Style="{StaticResource NavBtn}" Click="BtnNext_Click" Background="#A0504A"/>
-                    <Button Content="🤖 AI분석" Style="{StaticResource NavBtn}" Click="BtnAiAnalyze_Click" Background="#9C27B0"/>
+                    <Button Content="🤖 현재분석" Style="{StaticResource NavBtn}" Click="BtnAiAnalyze_Click" Background="#9C27B0"/>
+                    <Button Content="🤖 전체분석" Style="{StaticResource NavBtn}" Click="BtnAiAnalyzeAll_Click" Background="#7B1FA2"/>
                     <Button Content="💾 저장" Style="{StaticResource NavBtn}" Click="BtnSave_Click" Background="#2196F3"/>
                     <Button Content="📄 DOCX" Style="{StaticResource NavBtn}" Click="BtnExportDocx_Click" Background="#4CAF50"/>
+                    <Button Content="📄 PDF" Style="{StaticResource NavBtn}" Click="BtnExportPdf_Click" Background="#E65100"/>
                     <Button Content="설정" Style="{StaticResource NavBtn}" Click="BtnSettings_Click" Background="#757575"/>
                 </StackPanel>
             </Grid>
