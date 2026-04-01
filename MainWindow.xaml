@@ -50,6 +50,7 @@
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0">
                     <TextBlock Text="수특 영어를 휩쓸다" FontSize="20" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock x:Name="TxtVersion" Text="" FontSize="10" Foreground="#FFDDBBBB" VerticalAlignment="Center" Margin="8,4,0,0"/>
                     <TextBlock x:Name="TxtPageInfo" Text="" FontSize="14" Foreground="#FFDDDDDD" Margin="20,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel x:Name="PnlNavButtons" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,15,0" Visibility="Collapsed">

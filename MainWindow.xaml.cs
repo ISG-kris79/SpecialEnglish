@@ -49,6 +49,16 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         LoadApiKeys();
+        TxtVersion.Text = $"v{AutoUpdater.CurrentVersion}";
+        Loaded += async (s, e) => await CheckForUpdates();
+    }
+
+    private async Task CheckForUpdates()
+    {
+        await AutoUpdater.CheckAndApply(msg =>
+        {
+            Dispatcher.Invoke(() => TxtStatus.Text = msg);
+        });
     }
 
     private void LoadApiKeys()
