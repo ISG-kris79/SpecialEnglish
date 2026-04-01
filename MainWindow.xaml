@@ -149,18 +149,18 @@
             <TextBlock x:Name="TxtStatus" Text="" FontSize="12" Foreground="#999" VerticalAlignment="Center" HorizontalAlignment="Center"/>
         </Border>
 
-        <!-- AI 분석 오버레이 -->
-        <Grid x:Name="PnlAiOverlay" Grid.Row="0" Grid.RowSpan="4" Visibility="Collapsed">
+        <!-- 오버레이 (AI 분석 / 저장 완료 공용) -->
+        <Grid x:Name="PnlOverlay" Grid.Row="0" Grid.RowSpan="4" Visibility="Collapsed">
             <Border Background="#88000000"/>
             <Border Background="White" CornerRadius="12" Width="420" Height="220"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     BorderBrush="#DDD" BorderThickness="1" Padding="30">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="🤖 AI 분석 중" FontSize="20" FontWeight="Bold" Foreground="#9C27B0" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="TxtAiStatus" Text="준비 중..." FontSize="13" Foreground="#666" HorizontalAlignment="Center" Margin="0,12,0,8"/>
-                    <ProgressBar x:Name="PrgAi" Height="10" Foreground="#9C27B0" Background="#E0E0E0" Margin="0,4"/>
-                    <ProgressBar x:Name="PrgAiIndeterminate" Height="10" IsIndeterminate="True" Foreground="#CE93D8" Background="Transparent" Margin="0,2"/>
-                    <TextBlock x:Name="TxtAiPercent" Text="0%" FontSize="14" FontWeight="Bold" Foreground="#9C27B0" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    <TextBlock x:Name="TxtOverlayTitle" Text="🤖 AI 분석 중" FontSize="20" FontWeight="Bold" Foreground="#9C27B0" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TxtOverlayStatus" Text="준비 중..." FontSize="13" Foreground="#666" HorizontalAlignment="Center" Margin="0,12,0,8"/>
+                    <ProgressBar x:Name="PrgOverlay" Height="10" Foreground="#9C27B0" Background="#E0E0E0" Margin="0,4"/>
+                    <ProgressBar x:Name="PrgOverlayAnim" Height="10" IsIndeterminate="True" Foreground="#CE93D8" Background="Transparent" Margin="0,2"/>
+                    <TextBlock x:Name="TxtOverlayPercent" Text="0%" FontSize="14" FontWeight="Bold" Foreground="#9C27B0" HorizontalAlignment="Center" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
         </Grid>

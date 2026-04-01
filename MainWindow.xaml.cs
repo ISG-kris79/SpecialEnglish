@@ -645,6 +645,36 @@ main()
     //  네비게이션 + 저장
     // ═══════════════════════════════
 
+    // ═══════════════════════════════
+    //  오버레이 공용
+    // ═══════════════════════════════
+
+    private void ShowOverlay(string title, string status, string color)
+    {
+        TxtOverlayTitle.Text = title;
+        TxtOverlayTitle.Foreground = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(color));
+        TxtOverlayStatus.Text = status;
+        TxtOverlayPercent.Text = "0%";
+        TxtOverlayPercent.Foreground = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(color));
+        PrgOverlay.Value = 0;
+        PrgOverlay.Foreground = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(color));
+        PrgOverlayAnim.Visibility = Visibility.Visible;
+        PnlOverlay.Visibility = Visibility.Visible;
+    }
+
+    private async Task ShowOverlayDone(string title, string message, string color)
+    {
+        TxtOverlayTitle.Text = title;
+        TxtOverlayTitle.Foreground = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(color));
+        TxtOverlayStatus.Text = message;
+        TxtOverlayPercent.Text = "✓";
+        PrgOverlay.Value = 100;
+        PrgOverlayAnim.Visibility = Visibility.Collapsed;
+        PnlOverlay.Visibility = Visibility.Visible;
+        await Task.Delay(1500);
+        PnlOverlay.Visibility = Visibility.Collapsed;
+    }
+
     private void BtnPrev_Click(object sender, RoutedEventArgs e) => ShowPassage(_currentIndex - 1);
     private void BtnNext_Click(object sender, RoutedEventArgs e) => ShowPassage(_currentIndex + 1);
 
@@ -660,19 +690,15 @@ main()
         var p = _passages[_currentIndex];
         var vocabStr = string.Join(", ", p.VocabWords.Select(v => v.Split(' ')[0]).Take(10));
 
-        // 오버레이 표시
-        PnlAiOverlay.Visibility = Visibility.Visible;
-        PrgAi.Value = 0;
-        TxtAiPercent.Text = "0%";
-        TxtAiStatus.Text = $"수특 {p.Key} 분석 준비 중...";
+        ShowOverlay("🤖 AI 분석 중", $"수특 {p.Key} 분석 준비 중...", "#9C27B0");
 
         var analyzer = new AiAnalyzer();
-        analyzer.OnProgress += (pct, msg) => Dispatcher.Invoke(() =>
+        int _aiPct = 0;
+        analyzer.OnProgress += (pct, msg) => Dispatcher.Invoke(async () =>
         {
-            PrgAi.Value = pct;
-            TxtAiPercent.Text = $"{pct}%";
-            TxtAiStatus.Text = msg;
-            PrgAiIndeterminate.Visibility = pct < 100 ? Visibility.Visible : Visibility.Collapsed;
+            while (_aiPct < pct) { _aiPct++; PrgOverlay.Value = _aiPct; TxtOverlayPercent.Text = $"{_aiPct}%"; await Task.Delay(10); }
+            TxtOverlayStatus.Text = msg;
+            PrgOverlayAnim.Visibility = pct < 100 ? Visibility.Visible : Visibility.Collapsed;
         });
 
         try
@@ -690,7 +716,7 @@ main()
         finally
         {
             await Task.Delay(500);
-            PnlAiOverlay.Visibility = Visibility.Collapsed;
+            PnlOverlay.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -708,8 +734,7 @@ main()
             "전체 AI 분석", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (result != MessageBoxResult.OK) return;
 
-        PnlAiOverlay.Visibility = Visibility.Visible;
-        PrgAiIndeterminate.Visibility = Visibility.Visible;
+        ShowOverlay("🤖 전체 AI 분석", "준비 중...", "#7B1FA2");
 
         var analyzer = new AiAnalyzer();
         int done = 0;
@@ -722,9 +747,9 @@ main()
 
             done++;
             int pct = (int)(done * 100.0 / Math.Max(1, total));
-            TxtAiStatus.Text = $"[{done}/{total}] 수특 {p.Key} 분석 중...";
-            TxtAiPercent.Text = $"{pct}%";
-            PrgAi.Value = pct;
+            TxtOverlayStatus.Text = $"[{done}/{total}] 수특 {p.Key} 분석 중...";
+            TxtOverlayPercent.Text = $"{pct}%";
+            PrgOverlay.Value = pct;
 
             try
             {
@@ -737,12 +762,12 @@ main()
             await Task.Delay(500); // rate limit 방지
         }
 
-        TxtAiStatus.Text = "전체 분석 완료!";
-        TxtAiPercent.Text = "100%";
-        PrgAi.Value = 100;
-        PrgAiIndeterminate.Visibility = Visibility.Collapsed;
+        TxtOverlayStatus.Text = "전체 분석 완료!";
+        TxtOverlayPercent.Text = "100%";
+        PrgOverlay.Value = 100;
+        PrgOverlayAnim.Visibility = Visibility.Collapsed;
         await Task.Delay(1000);
-        PnlAiOverlay.Visibility = Visibility.Collapsed;
+        PnlOverlay.Visibility = Visibility.Collapsed;
 
         ShowPassage(_currentIndex);
         TxtStatus.Text = $"전체 AI 분석 완료: {done}개 처리";
@@ -776,50 +801,44 @@ main()
         TxtStatus.Text = $"저장 완료: {path} ({data.Count}개 지문)";
     }
 
-    private void BtnExportDocx_Click(object sender, RoutedEventArgs e)
+    private async void BtnExportDocx_Click(object sender, RoutedEventArgs e)
     {
         BtnSave_Click(sender, e);
-        var dlg = new SaveFileDialog
-        {
-            Filter = "Word 문서|*.docx|모든 파일|*.*",
-            FileName = "수특영어_종합.docx",
-            Title = "DOCX 내보내기 (한글에서 HWP 변환 가능)"
-        };
+        var dlg = new SaveFileDialog { Filter = "Word 문서|*.docx", FileName = "수특영어_종합.docx" };
         if (dlg.ShowDialog() == true)
         {
             try
             {
-                ExportService.ExportDocx(_passages, dlg.FileName);
-                TxtStatus.Text = $"DOCX 저장 완료: {dlg.FileName}";
-                MessageBox.Show($"저장 완료!\n{dlg.FileName}\n\n한글에서 열어서 HWP로 저장 가능합니다.", "내보내기");
+                ShowOverlay("📄 DOCX 저장", "파일 생성 중...", "#4CAF50");
+                await Task.Run(() => ExportService.ExportDocx(_passages, dlg.FileName));
+                TxtStatus.Text = $"DOCX 저장 완료";
+                await ShowOverlayDone("✅ 저장 완료", dlg.FileName, "#4CAF50");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"DOCX 저장 실패:\n{ex.Message}\n\n{ex.InnerException?.Message}\n\n{ex.StackTrace?[..Math.Min(300, ex.StackTrace?.Length ?? 0)]}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                PnlOverlay.Visibility = Visibility.Collapsed;
+                MessageBox.Show($"DOCX 저장 실패:\n{ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
 
-    private void BtnExportPdf_Click(object sender, RoutedEventArgs e)
+    private async void BtnExportPdf_Click(object sender, RoutedEventArgs e)
     {
         BtnSave_Click(sender, e);
-        var dlg = new SaveFileDialog
-        {
-            Filter = "PDF 파일|*.pdf|모든 파일|*.*",
-            FileName = "수특영어_종합.pdf",
-            Title = "PDF 내보내기"
-        };
+        var dlg = new SaveFileDialog { Filter = "PDF 파일|*.pdf", FileName = "수특영어_종합.pdf" };
         if (dlg.ShowDialog() == true)
         {
             try
             {
-                ExportService.ExportPdf(_passages, dlg.FileName);
-                TxtStatus.Text = $"PDF 저장 완료: {dlg.FileName}";
-                MessageBox.Show($"PDF 저장 완료!\n{dlg.FileName}", "내보내기");
+                ShowOverlay("📄 PDF 저장", "파일 생성 중...", "#E65100");
+                await Task.Run(() => ExportService.ExportPdf(_passages, dlg.FileName));
+                TxtStatus.Text = $"PDF 저장 완료";
+                await ShowOverlayDone("✅ 저장 완료", dlg.FileName, "#4CAF50");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"PDF 저장 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                PnlOverlay.Visibility = Visibility.Collapsed;
+                MessageBox.Show($"PDF 저장 실패:\n{ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

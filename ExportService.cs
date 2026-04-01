@@ -17,94 +17,112 @@ public static class ExportService
     {
         var doc = new XWPFDocument();
 
+        // 페이지 여백 축소
+        var sectPr = doc.Document.body.sectPr ?? (doc.Document.body.sectPr = new NPOI.OpenXmlFormats.Wordprocessing.CT_SectPr());
+        var pgMar = sectPr.pgMar ?? (sectPr.pgMar = new NPOI.OpenXmlFormats.Wordprocessing.CT_PageMar());
+        pgMar.top = 600; pgMar.bottom = 600; pgMar.left = 700; pgMar.right = 700;
+
         foreach (var p in passages)
         {
             if (string.IsNullOrEmpty(p.English)) continue;
 
             // 헤더
             var header = doc.CreateParagraph();
+            header.SpacingAfter = 100;
             var hRun = header.CreateRun();
             hRun.SetText($"수특 {p.Key}  |  {GetType(p)}");
-            hRun.FontSize = 14;
+            hRun.FontSize = 12;
             hRun.IsBold = true;
             hRun.SetColor("C0645C");
             hRun.FontFamily = "맑은 고딕";
 
-            // 좌우 2단 테이블 (좌: 지문, 우: 해석+어휘)
+            // 좌우 2단 테이블
             var table = doc.CreateTable(1, 2);
-            table.Width = 5000;
-            table.SetColumnWidth(0, 2800);
-            table.SetColumnWidth(1, 2200);
+            // 전체 폭 = A4 (약 9638 twips) - 좌우 여백(1400) = 8238
+            table.Width = 9000;
+            table.SetColumnWidth(0, 5000);  // 좌 55%
+            table.SetColumnWidth(1, 4000);  // 우 45%
 
-            // 테두리 제거
+            // 테두리: 좌우 셀 사이 세로선만
             var tblPr = table.GetCTTbl().tblPr;
-            tblPr.tblBorders = new CT_TblBorders();
+            var borders = new CT_TblBorders();
+            borders.top = new CT_Border { val = ST_Border.none };
+            borders.bottom = new CT_Border { val = ST_Border.none };
+            borders.left = new CT_Border { val = ST_Border.none };
+            borders.right = new CT_Border { val = ST_Border.none };
+            borders.insideH = new CT_Border { val = ST_Border.none };
+            borders.insideV = new CT_Border { val = ST_Border.single, color = "DDDDDD", sz = 4 };
+            tblPr.tblBorders = borders;
 
             // ── 좌측: 영어 지문 ──
             var leftCell = table.GetRow(0).GetCell(0);
-            leftCell.Paragraphs[0].SpacingBetween = 1.5;
-            RenderMarkedText(leftCell.Paragraphs[0], p.Numbered, p.Marks);
+            var leftFirst = leftCell.Paragraphs[0];
+            leftFirst.SpacingBetween = 1.4;
+            RenderMarkedText(leftFirst, p.Numbered, p.Marks, 9);
 
-            // 각주
             if (!string.IsNullOrEmpty(p.Footnotes))
             {
                 var fnPara = leftCell.AddParagraph();
+                fnPara.SpacingBefore = 80;
                 var fnRun = fnPara.CreateRun();
                 fnRun.SetText(p.Footnotes);
-                fnRun.FontSize = 8;
+                fnRun.FontSize = 7;
                 fnRun.SetColor("888888");
                 fnRun.FontFamily = "맑은 고딕";
             }
 
             // ── 우측: 해석 + 어휘 ──
             var rightCell = table.GetRow(0).GetCell(1);
+            // 셀 패딩
+            // 셀 좌측 패딩
 
-            // 헤더
-            var koHeader = rightCell.Paragraphs[0];
-            var khRun = koHeader.CreateRun();
+            var koHeader2 = rightCell.Paragraphs[0];
+            koHeader2.SpacingAfter = 60;
+            var khRun = koHeader2.CreateRun();
             khRun.SetText("해석 및 어휘 ✈");
-            khRun.FontSize = 10;
+            khRun.FontSize = 9;
             khRun.IsBold = true;
             khRun.SetColor("C0645C");
             khRun.FontFamily = "맑은 고딕";
 
-            // 해석
             if (!string.IsNullOrEmpty(p.Korean))
             {
                 var koSents = Regex.Split(p.Korean, @"(?<=[.다])\s+");
-                var koPara = rightCell.AddParagraph();
-                koPara.SpacingBetween = 1.3;
                 for (int si = 0; si < koSents.Length; si++)
                 {
+                    var koPara = rightCell.AddParagraph();
+                    koPara.SpacingBetween = 1.2;
+                    koPara.SpacingAfter = 20;
                     var koRun = koPara.CreateRun();
                     var prefix = si < Circled.Length ? Circled[si] + " " : "";
-                    koRun.SetText(prefix + koSents[si].Trim() + " ");
-                    koRun.FontSize = 9;
+                    koRun.SetText(prefix + koSents[si].Trim());
+                    koRun.FontSize = 8;
                     koRun.FontFamily = "맑은 고딕";
                 }
             }
 
             // 구분선
             var divPara = rightCell.AddParagraph();
+            divPara.SpacingBefore = 40;
+            divPara.SpacingAfter = 40;
             var divRun = divPara.CreateRun();
-            divRun.SetText("────────────────────");
+            divRun.SetText("─────────────────");
             divRun.SetColor("DDDDDD");
-            divRun.FontSize = 6;
+            divRun.FontSize = 5;
 
-            // 어휘
             if (p.VocabWords.Count > 0)
             {
-                var vPara = rightCell.AddParagraph();
                 foreach (var vw in p.VocabWords)
                 {
+                    var vPara = rightCell.AddParagraph();
+                    vPara.SpacingAfter = 10;
                     var vRun = vPara.CreateRun();
-                    vRun.SetText("· " + vw + "\n");
-                    vRun.FontSize = 8;
+                    vRun.SetText("· " + vw);
+                    vRun.FontSize = 7;
                     vRun.FontFamily = "맑은 고딕";
                 }
             }
 
-            // 페이지 나눔
             var breakPara = doc.CreateParagraph();
             breakPara.IsPageBreak = true;
         }
@@ -113,13 +131,13 @@ public static class ExportService
         doc.Write(fs);
     }
 
-    private static void RenderMarkedText(XWPFParagraph para, string text, List<MarkItem> marks)
+    private static void RenderMarkedText(XWPFParagraph para, string text, List<MarkItem> marks, int fontSize = 11)
     {
         if (string.IsNullOrEmpty(text) || marks.Count == 0)
         {
             var run = para.CreateRun();
             run.SetText(text ?? "");
-            run.FontSize = 11;
+            run.FontSize = fontSize;
             run.FontFamily = "맑은 고딕";
             return;
         }
@@ -154,7 +172,7 @@ public static class ExportService
             var segment = text[start..pos];
             var run = para.CreateRun();
             run.SetText(segment);
-            run.FontSize = 11;
+            run.FontSize = fontSize;
             run.FontFamily = "맑은 고딕";
 
             if (curType == "어법")
@@ -219,8 +237,9 @@ public static class ExportService
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4);
-                    page.Margin(15);
-                    page.DefaultTextStyle(x => x.FontSize(9).FontFamily("맑은 고딕"));
+                    page.MarginVertical(20);
+                    page.MarginHorizontal(25);
+                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily("맑은 고딕"));
 
                     // 상단 배너
                     page.Header().Height(30).Background(coral).Padding(6).Row(row =>
@@ -233,44 +252,40 @@ public static class ExportService
                     });
 
                     // 좌우 2단
-                    page.Content().PaddingTop(8).Row(row =>
+                    page.Content().PaddingTop(10).Row(row =>
                     {
-                        // ── 좌측: 영어 지문 ──
-                        row.RelativeItem(55).PaddingRight(6).Column(left =>
+                        // ── 좌측: 영어 지문 (55%) ──
+                        row.RelativeItem(55).PaddingRight(10).Column(left =>
                         {
-                            left.Spacing(4);
+                            left.Spacing(6);
 
-                            // 지문 (마킹)
                             left.Item().Text(text =>
                             {
-                                text.DefaultTextStyle(x => x.FontSize(9).LineHeight(1.6f));
+                                text.DefaultTextStyle(x => x.FontSize(10).LineHeight(1.7f));
                                 RenderPdfMarked(text, p.Numbered, p.Marks);
                             });
 
-                            // 각주
                             if (!string.IsNullOrEmpty(p.Footnotes))
-                                left.Item().PaddingTop(4).Text(p.Footnotes)
-                                    .FontSize(7).FontColor(Colors.Grey.Medium);
+                                left.Item().PaddingTop(8).Text(p.Footnotes)
+                                    .FontSize(8).FontColor(Colors.Grey.Medium);
                         });
 
-                        // 구분선
+                        // 세로 구분선
                         row.ConstantItem(1).Background(Colors.Grey.Lighten3);
 
-                        // ── 우측: 해석 + 어휘 ──
-                        row.RelativeItem(45).PaddingLeft(6).Column(right =>
+                        // ── 우측: 해석 + 어휘 (45%) ──
+                        row.RelativeItem(45).PaddingLeft(10).Column(right =>
                         {
-                            right.Spacing(4);
+                            right.Spacing(6);
 
-                            // 헤더
-                            right.Item().Text("해석 및 어휘 ✈").Bold().FontSize(10).FontColor(coral);
+                            right.Item().Text("해석 및 어휘 ✈").Bold().FontSize(11).FontColor(coral);
 
-                            // 해석
                             if (!string.IsNullOrEmpty(p.Korean))
                             {
                                 var koSents = Regex.Split(p.Korean, @"(?<=[.다])\s+");
                                 right.Item().Text(text =>
                                 {
-                                    text.DefaultTextStyle(x => x.FontSize(8).LineHeight(1.5f));
+                                    text.DefaultTextStyle(x => x.FontSize(9).LineHeight(1.6f));
                                     for (int si = 0; si < koSents.Length; si++)
                                     {
                                         var prefix = si < Circled.Length ? Circled[si] + " " : "";
@@ -279,15 +294,13 @@ public static class ExportService
                                 });
                             }
 
-                            // 구분선
-                            right.Item().PaddingVertical(3).LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten3);
+                            right.Item().PaddingVertical(5).LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten3);
 
-                            // 어휘
                             if (p.VocabWords.Count > 0)
                             {
                                 right.Item().Text(text =>
                                 {
-                                    text.DefaultTextStyle(x => x.FontSize(7).LineHeight(1.4f));
+                                    text.DefaultTextStyle(x => x.FontSize(8).LineHeight(1.5f));
                                     foreach (var vw in p.VocabWords)
                                         text.Span("· " + vw + "\n");
                                 });
