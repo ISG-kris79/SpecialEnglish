@@ -1,7 +1,7 @@
 <Window x:Class="SuneungMarker.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="설정 - API 키 관리" Height="380" Width="550"
+        Title="설정 - API 키 관리" Height="450" Width="550"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="#FAFAFA">
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -17,17 +17,29 @@
         <TextBlock Grid.Row="0" Text="AI API 키 설정" FontSize="18" FontWeight="Bold" Foreground="#C0645C"/>
 
         <StackPanel Grid.Row="2" Margin="0,0,0,12">
-            <TextBlock Text="Claude API Key (Anthropic)" FontSize="12" FontWeight="Bold" Foreground="#555" Margin="0,0,0,4"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Claude API Key (Anthropic)" FontSize="12" FontWeight="Bold" Foreground="#555"/>
+                <TextBlock Text=" - 순서/핵심/삽입 분석" FontSize="10" Foreground="#999" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Text="발급: console.anthropic.com → API Keys → Create Key" FontSize="9" Foreground="#AAA" Margin="0,1,0,3"/>
             <TextBox x:Name="TxtClaude" FontSize="12" Padding="6,4" Height="28"/>
         </StackPanel>
 
         <StackPanel Grid.Row="3" Margin="0,0,0,12">
-            <TextBlock Text="OpenAI API Key (GPT)" FontSize="12" FontWeight="Bold" Foreground="#555" Margin="0,0,0,4"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="OpenAI API Key (GPT)" FontSize="12" FontWeight="Bold" Foreground="#555"/>
+                <TextBlock Text=" - 어법/밑줄의미 분석" FontSize="10" Foreground="#999" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Text="발급: platform.openai.com → API Keys → Create new secret key" FontSize="9" Foreground="#AAA" Margin="0,1,0,3"/>
             <TextBox x:Name="TxtGpt" FontSize="12" Padding="6,4" Height="28"/>
         </StackPanel>
 
         <StackPanel Grid.Row="4" Margin="0,0,0,12">
-            <TextBlock Text="Gemini API Key (Google)" FontSize="12" FontWeight="Bold" Foreground="#555" Margin="0,0,0,4"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Gemini API Key (Google)" FontSize="12" FontWeight="Bold" Foreground="#555"/>
+                <TextBlock Text=" - 어휘/연결어 분석" FontSize="10" Foreground="#999" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Text="발급: aistudio.google.com → Get API Key → Create API key" FontSize="9" Foreground="#AAA" Margin="0,1,0,3"/>
             <TextBox x:Name="TxtGemini" FontSize="12" Padding="6,4" Height="28"/>
         </StackPanel>
 

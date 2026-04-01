@@ -795,7 +795,7 @@ main()
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"저장 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"DOCX 저장 실패:\n{ex.Message}\n\n{ex.InnerException?.Message}\n\n{ex.StackTrace?[..Math.Min(300, ex.StackTrace?.Length ?? 0)]}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
